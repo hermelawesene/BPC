@@ -1,0 +1,8 @@
+jax[gpu]
+numpy
+scipy
+scikit-learn
+tensorflow
+matplotlib
+pyyaml
+pytest
