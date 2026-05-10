@@ -1,0 +1,11 @@
+preset: paper_svi_delay5000_cap005_3hidden_zeroone
+config: {}
+logging:
+  save_dir: runs
+mode: single
+sweep_presets:
+  - paper_literal_batch_local
+  - paper_svi_scaled
+  - paper_svi_delay5000_cap005_3hidden_zeroone
+  - paper_svi_delay10000_cap005_3hidden_zeroone
+  - stabilized_svi_delay5000_cap005_2hidden_std

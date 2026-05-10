@@ -1,0 +1,13 @@
+preset: null
+config:
+  name: two_moons
+  seed: 0
+  epochs: 80
+  hidden: 100
+  hidden_layers: 1
+logging:
+  save_dir: runs
+data:
+  n_train: 1000
+  n_test: 300
+  noise: 0.10
