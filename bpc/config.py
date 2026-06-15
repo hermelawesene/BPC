@@ -26,9 +26,9 @@ PLOT_CURVES = True
 LOGGING_MODE = "verbose"
 
 SEED = 0
-MNIST_EPOCHS = 50
+MNIST_EPOCHS = 20
 BATCH_SIZE = 128
-HIDDEN = 128
+HIDDEN = 400
 LATENT_STEPS = 10
 LATENT_LR = 0.01
 KAPPA_EXPONENT = 0.25
@@ -325,5 +325,291 @@ def make_presets() -> Dict[str, BPCConfig]:
             latent_lr=0.005,
             psi0=100.0,
             nu0_extra=10.0,
+        ),
+        "mnist_feedforward_stable": replace(
+            base,
+            name="mnist_feedforward_stable",
+            hidden_layers=3,
+            normalize="zero_one",
+            update_mode="svi_power",     # gentler than svi_scaled
+            scale_power=0.5,              # scale = sqrt(N/B) ≈ 21.7 instead of 469
+            kappa_delay=1000.0,
+            kappa_max=0.15,               # allow larger kappa than 0.05
+            hidden_init="feedforward",   # warm start → alive gradients
+            latent_steps=20,
+            latent_lr=0.005,
+        ),
+        "mnist_stable_v2": replace(
+            base,
+            name="mnist_stable_v2",
+            hidden_layers=3,
+            normalize="zero_one",
+            update_mode="svi_power",        # Gentler than batch_local
+            scale_power=0.4,                # Even softer scaling
+            kappa_delay=1500.0,             # Give it time to settle
+            kappa_max=0.08,                 # Conservative max learning rate
+            hidden_init="feedforward",
+            latent_steps=25,
+            latent_lr=0.004,
+            warmup_epochs=2,                # Extra gentle start
+            warmup_latent_steps=30,
+            warmup_latent_lr=0.01,
+        ),
+        "best_stable_mnist": replace(
+            base,
+            name="best_stable_mnist",
+            hidden_layers=3,
+            normalize="zero_one",
+            
+            # --- Core Stable Settings ---
+            hidden_init="feedforward",           # Very important
+            latent_steps=25,
+            latent_lr=0.004,
+            
+            update_mode="svi_power",             # Gentler than batch_local
+            scale_power=0.35,                    # Quite soft scaling (~ sqrt(sqrt(N/B)))
+            kappa_delay=2000.0,                  # Give early epochs time to stabilize
+            kappa_max=0.09,                      # Conservative but not too weak
+            kappa_multiplier=1.0,
+            
+            # Optional extra safety
+            warmup_epochs=3,
+            warmup_latent_steps=30,
+            warmup_latent_lr=0.008,
+            warmup_hidden_init="feedforward",
+        ),
+        "mnist_strong_stable_v3": replace(
+            base,
+            name="mnist_strong_stable_v3",
+            hidden_layers=3,
+            normalize="zero_one",
+
+            hidden_init="feedforward",
+            latent_steps=30,           # More inference steps
+            latent_lr=0.003,           # Slower, more careful inference
+
+            update_mode="svi_power",
+            scale_power=0.25,          # Much gentler scaling
+            kappa_delay=3000.0,        # Delay strong updates longer
+            kappa_max=0.06,            # Quite conservative
+            kappa_multiplier=0.9,
+
+            warmup_epochs=5,           # Longer warmup
+            warmup_latent_steps=40,
+            warmup_latent_lr=0.01,
+
+            precision_rescale="unit_mean_precision",   # Normalize precision across layers
+        ),
+        "mnist_ultra_stable_v4": replace(
+            base,
+            name="mnist_ultra_stable_v4",
+            hidden_layers=3,
+            normalize="zero_one",
+
+            hidden_init="feedforward",
+            latent_steps=35,                    # More careful inference
+            latent_lr=0.0025,                   # Even slower inference LR
+
+            update_mode="svi_power",
+            scale_power=0.20,                   # Very gentle scaling
+            kappa_delay=4000.0,                 # Delay strong updates longer
+            kappa_max=0.055,                    # Very conservative
+            kappa_multiplier=0.85,
+
+            warmup_epochs=6,
+            warmup_latent_steps=40,
+            warmup_latent_lr=0.009,
+
+            precision_rescale="unit_mean_precision",   # Normalize precision per layer
+        ),
+        "mnist_epoch_stable": replace(
+            base,
+            name="mnist_epoch_stable",
+            hidden_layers=2,                    # Start with 2 layers (much easier)
+            normalize="zero_one",
+
+            hidden_init="feedforward",
+            latent_steps=30,
+            latent_lr=0.003,
+
+            update_mode="epoch_exact",          # ← Big change: Full epoch update (closer to paper)
+            # No need for scale_power or high kappa in epoch mode
+
+            kappa_delay=0.0,
+            kappa_max=1.0,                      # Full update at end of epoch
+            kappa_clock="epoch",
+
+            warmup_epochs=5,
+            warmup_latent_steps=40,
+            warmup_latent_lr=0.008,
+
+            precision_rescale="unit_mean_precision",
+        ),
+        "mnist_best_hybrid_v5": replace(
+            base,# bestttt so far
+            name="mnist_best_hybrid_v5",
+            hidden_layers=2,                    
+            normalize="zero_one",
+            hidden=400,
+
+            hidden_init="feedforward",
+            latent_steps=30,
+            latent_lr=0.003,
+
+            update_mode="svi_power",
+            scale_power=0.25,
+            kappa_delay=2500.0,
+            kappa_max=0.07,
+
+            warmup_epochs=5,
+            warmup_latent_steps=35,
+            warmup_latent_lr=0.009,
+
+            precision_rescale="unit_mean_precision",
+            psi0=200.0,                         
+            nu0_extra=5.0,
+        ),
+        "mnist_best_hybrid_vv6": replace(
+            base,
+            name="mnist_best_hybrid_vv6",
+            hidden=400,                    # Keep wide network
+            hidden_layers=2,
+            normalize="zero_one",
+
+            hidden_init="feedforward",
+            latent_steps=40,               # More inference time
+            latent_lr=0.002,               # Slower, more stable inference
+
+            update_mode="svi_power",
+            scale_power=0.20,              # Gentler scaling
+            kappa_delay=3500.0,            # Delay strong updates longer
+            kappa_max=0.055,               # More conservative after initial learning
+
+            warmup_epochs=8,               # Longer warmup
+            warmup_latent_steps=50,
+            warmup_latent_lr=0.008,
+
+            precision_rescale="unit_mean_precision",
+            psi0=300.0,                    # Slightly stronger prior
+            nu0_extra=6.0,
+        ),
+        "mnist_hybrid_v6": replace(
+            base,
+            name="mnist_hybrid_v6",
+            hidden_layers=3,                    # Go back to 3 layers now that we have stability
+            normalize="zero_one",
+
+            hidden_init="feedforward",
+            latent_steps=30,
+            latent_lr=0.0028,
+
+            update_mode="svi_power",
+            scale_power=0.22,                   # Slightly gentler
+            kappa_delay=3000.0,
+            kappa_max=0.065,
+
+            warmup_epochs=6,
+            warmup_latent_steps=40,
+            warmup_latent_lr=0.008,
+
+            precision_rescale="unit_mean_precision",
+            psi0=250.0,                         # Slightly stronger prior than last
+            nu0_extra=4.0,
+        ),
+        "mnist_top_attempt": replace(
+            base,
+            name="mnist_top_attempt",
+            hidden_layers=2,                    # Stability first
+            normalize="zero_one",
+
+            hidden_init="feedforward",
+            latent_steps=35,
+            latent_lr=0.0025,
+
+            update_mode="svi_power",
+            scale_power=0.18,                   # Very gentle
+            kappa_delay=3500.0,
+            kappa_max=0.05,                     # Conservative
+
+            warmup_epochs=8,                    # Long warmup
+            warmup_latent_steps=45,
+            warmup_latent_lr=0.009,
+
+            precision_rescale="unit_mean_precision",
+            psi0=300.0,                         # Stronger prior
+            nu0_extra=6.0,
+        ),
+        "mnist_final_push": replace(
+            base,
+            name="mnist_final_push",
+            hidden_layers=2,
+            normalize="zero_one",
+
+            hidden_init="feedforward",
+            latent_steps=40,              # More inference time
+            latent_lr=0.002,
+
+            update_mode="svi_power",
+            scale_power=0.15,             # Even gentler
+            kappa_delay=4000.0,
+            kappa_max=0.045,
+
+            warmup_epochs=10,             # Longer warmup
+            warmup_latent_steps=50,
+            warmup_latent_lr=0.008,
+
+            precision_rescale="unit_mean_precision",
+            psi0=350.0,                   # Slightly stronger prior
+            nu0_extra=8.0,
+        ),
+        "paper_exact_mnist": replace(
+            base,
+            name="paper_exact_mnist",
+            hidden_layers=3,          # 3 hidden + 1 output = 4-layer network
+            hidden=128,
+            normalize="zero_one",     # pixels in [0,1]
+            update_mode="batch_local",# no SVI rescaling — paper doesn't mention it
+            kappa_delay=0.0,          # no delay in paper
+            kappa_max=None,           # no cap in paper
+            kappa_exponent=0.25,      # paper: epsilon = 0.25
+            hidden_init="feedforward",# warm start — essential for alive gradients
+            latent_steps=10,          # paper: 10 iterations
+            latent_lr=0.01,           # paper: Adam lr=0.01
+        ),
+        "paper_stabilized_mnist": replace(
+            base,
+            name="paper_stabilized_mnist",
+            hidden_layers=3,
+            hidden=128,
+            normalize="zero_one",
+            update_mode="batch_local",
+            kappa_delay=0.0,
+            kappa_max=0.5,            # gentle cap to prevent huge early jumps
+            kappa_exponent=0.25,
+            hidden_init="feedforward",
+            latent_steps=20,          # more steps for convergence
+            latent_lr=0.005,          # lower lr with more steps
+        ),
+        "mnist_v6": replace(
+            base,
+            name="mnist_v6",
+            hidden_layers=2,
+            hidden=128,
+            normalize="zero_one",
+            update_mode="online_additive",        # no prior-anchor forgetting
+            kappa_exponent=0.25,
+            kappa_delay=0.0,
+            kappa_max=0.5,
+            kappa_min=0.01,
+            hidden_init="feedforward",
+            latent_steps=20,
+            latent_lr=0.005,
+            psi0=1000.0,
+            nu0_extra=2.0,
+            precision_rescale="unit_mean_precision",
+            warmup_epochs=3,
+            warmup_latent_steps=30,
+            warmup_latent_lr=0.008,
+            epochs=50,
         ),
     }
