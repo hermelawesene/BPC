@@ -195,6 +195,8 @@ def train_mnist_dataset(
             for xb_np, yb_np in batch_iterator(x_train_np, y_train_np, cfg.batch_size, rng, shuffle=True):
                 xb = jnp.asarray(xb_np, dtype=DTYPE)
                 yb = jnp.asarray(yb_np, dtype=DTYPE)
+                if xb_np.shape[0] != cfg.batch_size:
+                    continue  
                 key, sub = jax.random.split(key)
                 st, ldiag, sdiag = infer_stats_for_epoch(params, xb, yb, sub, epoch)
                 total_stats = add_stats(total_stats, st)
